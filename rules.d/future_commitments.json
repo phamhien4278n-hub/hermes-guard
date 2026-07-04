@@ -1,0 +1,29 @@
+{
+  "version": "1.7.9",
+  "response_rules": [
+    {
+      "id": "unsupported_future_commitment",
+      "enabled": true,
+      "risk": "medium",
+      "category": "follow_through",
+      "tags": ["future", "commitment", "task"],
+      "patterns": [
+        "\u7559\u6863",
+        "\u8bb0\u4e0b\u6765",
+        "\u5199\u5230",
+        "\u665a\u70b9\u5904\u7406",
+        "\u4e0b\u6b21\u4fee\u590d",
+        "\u56de\u5934\u8865",
+        "record this later",
+        "write this down",
+        "handle it later",
+        "fix it next time"
+      ],
+      "regex_patterns": [
+        "\u7b49.{0,40}\u518d"
+      ],
+      "default_required_any": ["manual_review", "file_write", "command_run"],
+      "instruction": "Response contains a promise to record, save, fix, or handle something later. If the action is needed for the current task, do it now and register evidence; otherwise state clearly that it is only a plan."
+    }
+  ]
+}
