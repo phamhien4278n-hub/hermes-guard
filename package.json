@@ -1,0 +1,27 @@
+{
+  "name": "hermes-guard",
+  "version": "1.7.9",
+  "description": "CLI-first external guardrail layer for Hermes, Codex, Claude Code, and similar LLM agents.",
+  "type": "module",
+  "private": false,
+  "license": "AGPL-3.0",
+  "scripts": {
+    "start": "node cli_panel.mjs",
+    "dashboard": "node dashboard.mjs",
+    "test": "node --test",
+    "check": "node guard.mjs manifest check && node guard.mjs rules validate && node --test",
+    "manifest": "node guard.mjs manifest check",
+    "rules:validate": "node guard.mjs rules validate"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "llm",
+    "guardrails",
+    "hermes",
+    "cli",
+    "audit",
+    "evidence"
+  ]
+}
