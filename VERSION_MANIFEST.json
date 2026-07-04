@@ -1,0 +1,55 @@
+{
+  "version": "1.7.9",
+  "generated_at": "2026-07-04",
+  "notes": "Core deployment integrity manifest. The manifest file itself is intentionally not hashed.",
+  "files": [
+    {
+      "path": "guard.mjs",
+      "sha256": "996ab0b5b3a220ea071eaa86e6c23b4fb183e457a6f94ec5f20ce09086f0a2a2"
+    },
+    {
+      "path": "hermes_hook_bridge.mjs",
+      "sha256": "bd185cf13655070f8b9e85382a8f0735bd0182cc35d721faf90b681fa1be922a"
+    },
+    {
+      "path": "cli_panel.mjs",
+      "sha256": "5970d4f35e244e8e993ccea5c17f40fdcdef3d74a260672fc6c9648b440ddb8d"
+    },
+    {
+      "path": "rules.json",
+      "sha256": "d68c75859f54bf90ae5fb7ef0c1aadd0a7ffeb6527ad038e74898ec83c2d8df4"
+    },
+    {
+      "path": "rules.d/numeric_claims.json",
+      "sha256": "b33b7031cfa6d8f62fb7526c69b19f57a001016a944835a08b1c437516d88d59"
+    },
+    {
+      "path": "rules.d/future_commitments.json",
+      "sha256": "19686c1b35c417038de409680546f44fa0fa49cca4689ebf7f0156aa787bc521"
+    },
+    {
+      "path": "rules.d/chinese_response_claims.json",
+      "sha256": "614995b7e11c07db6f67b2810f27680be4e608422602f52f085b417e9daf2ffe"
+    },
+    {
+      "path": "START_HERE.bat",
+      "sha256": "2354ca73a921bd038c870fae7bb6f96cc5c23834da434862433c333d0f9aa634"
+    },
+    {
+      "path": "START_CLI_PANEL.bat",
+      "sha256": "56e14a0e945799bea4e6aab673708bb94cb59a906da65d3bcf4829cc7fd016b5"
+    },
+    {
+      "path": "CHECK_SYSTEM.bat",
+      "sha256": "9001d0da834aa4dc95aafbdea4485c788f3c01072613545820e49f665ec1a0d7"
+    }
+  ],
+  "optional_files": [
+    {
+      "path": "dashboard.mjs"
+    },
+    {
+      "path": "README_FOR_NORMAL_USERS.md"
+    }
+  ]
+}
