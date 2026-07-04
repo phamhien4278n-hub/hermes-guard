@@ -1,0 +1,88 @@
+{
+  "version": "1.7.9",
+  "response_rules": [
+    {
+      "id": "unsupported_zh_completion_claim",
+      "enabled": true,
+      "risk": "high",
+      "category": "completion_hygiene",
+      "tags": ["zh", "completion", "verification", "file", "test"],
+      "patterns": [
+        "搞定了",
+        "都搞完了",
+        "全搞完了",
+        "全都搞完了",
+        "处理完了",
+        "都处理完了",
+        "全部处理完了",
+        "已经处理",
+        "已处理",
+        "修好了",
+        "都修好了",
+        "改好了",
+        "都改好了",
+        "全部改好了",
+        "弄好了",
+        "都弄好了",
+        "全都弄好了",
+        "完成了",
+        "都完成了",
+        "全部完成了",
+        "已经完成",
+        "保存好了",
+        "全都保存好了",
+        "已保存",
+        "写好了",
+        "已写入",
+        "已更新",
+        "已同步",
+        "同步好了",
+        "跑过了",
+        "跑完了",
+        "测试过了",
+        "测过了",
+        "核实过",
+        "核验过",
+        "确认过",
+        "检查过了",
+        "验证过了",
+        "没问题了",
+        "可以用了"
+      ],
+      "regex_patterns": [
+        "(?:都|全|全部|全都).{0,8}(?:搞完|搞定|处理完|弄好|改好|修好|保存好|完成)",
+        "(?:文件|代码|配置|规则|文档).{0,12}(?:已|已经)?(?:保存|写入|更新|同步|改好|修好|完成)",
+        "(?:测试|命令|脚本|检查).{0,12}(?:已|已经)?(?:通过|跑过|跑完|执行完|完成)",
+        "(?:我|这边)?(?:已|已经)?(?:核实|核验|确认|验证|检查)过?"
+      ],
+      "default_required_any": ["file_read", "file_write", "command_run", "test_passed", "web_verified", "manual_review"],
+      "evidence_policy": "strict_subject",
+      "instruction": "Chinese completion or verification claim detected. It must be backed by relevant evidence; otherwise rewrite as unverified or run the needed check first."
+    },
+    {
+      "id": "unsupported_zh_memory_commitment",
+      "enabled": true,
+      "risk": "medium",
+      "category": "memory_hygiene",
+      "tags": ["zh", "memory", "future", "commitment"],
+      "patterns": [
+        "记下了",
+        "我记下了",
+        "已经记下",
+        "帮你记住",
+        "以后记得",
+        "下次提醒",
+        "回头提醒",
+        "留档了",
+        "存档了",
+        "备忘了"
+      ],
+      "regex_patterns": [
+        "(?:我|这边)?(?:已|已经)?(?:记下|留档|存档|备忘)",
+        "(?:以后|下次|回头).{0,20}(?:记得|提醒|处理|修)"
+      ],
+      "default_required_any": ["file_write", "command_run", "manual_review"],
+      "instruction": "Chinese memory or future-commitment claim detected. It needs external memory/write evidence, or it should be phrased as a plan rather than a completed fact."
+    }
+  ]
+}
