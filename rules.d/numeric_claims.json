@@ -1,0 +1,48 @@
+{
+  "version": "1.7.9",
+  "response_rules": [
+    {
+      "id": "unsupported_numeric_benchmark_claim",
+      "enabled": true,
+      "risk": "high",
+      "category": "source_hygiene",
+      "tags": ["numeric", "benchmark", "score", "leaderboard"],
+      "patterns": [
+        "MMLU",
+        "MMLU-Pro",
+        "SWE-bench",
+        "HumanEval",
+        "GSM8K",
+        "GPQA",
+        "Chatbot Arena",
+        "Elo",
+        "benchmark",
+        "leaderboard",
+        "accuracy",
+        "score",
+        "得分",
+        "分数",
+        "成功率",
+        "准确率",
+        "通过率",
+        "胜率",
+        "排名",
+        "榜单",
+        "ranked #",
+        "pass@1"
+      ],
+      "regex_patterns": [
+        "\\b[A-Za-z][A-Za-z0-9_.-]*(?:\\s*[-/]\\s*[A-Za-z0-9_.-]+)?\\s+(?:score|accuracy|acc|pass@1|rank|ranked)?\\s*[:=]?\\s*\\d+(?:\\.\\d+)?\\s*%",
+        "\\b(?:MMLU(?:-Pro)?|SWE-bench|HumanEval|GSM8K|GPQA|ARC|HellaSwag|TruthfulQA|BIG-Bench|BBH|Chatbot Arena|Elo)\\b[^\\n]{0,80}\\d+(?:\\.\\d+)?\\s*%?",
+        "\\b(?:score|accuracy|acc|ranked|rank|leaderboard|benchmark)\\b[^\\n]{0,80}\\d+(?:\\.\\d+)?\\s*%?",
+        "\\b(?:得分|分数|成功率|准确率|通过率|胜率|排名|榜单|测评|评测|基准测试)\\b[^\\n]{0,80}\\d+(?:\\.\\d+)?\\s*%?",
+        "(?:排名|排行)\\s*(?:第|#)?\\s*\\d+",
+        "(?:榜单|排行榜)[^\\n]{0,40}(?:第一|第\\s*\\d+|#\\s*\\d+)",
+        "\\branked\\s*#?\\d+\\b"
+      ],
+      "default_required_any": ["web_verified", "manual_review"],
+      "evidence_policy": "strict_subject",
+      "instruction": "Response contains a numeric benchmark, ranking, score, or percentage claim. It must be supported by registered web_verified or manual_review evidence; otherwise mark it as unverified."
+    }
+  ]
+}
