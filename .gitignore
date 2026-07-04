@@ -1,0 +1,34 @@
+# Hermes Guard — .gitignore
+
+# Audit logs (runtime data, never commit)
+audit/
+*.jsonl
+*.errors.jsonl
+*.evidence.jsonl
+*.state.json
+
+# Local settings
+settings.json
+
+# Cases
+cases/
+
+# Temp files
+tmp*/
+tmp_*/
+
+# Dependencies
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Archives
+*.zip
+*.7z
+*.tar.gz
