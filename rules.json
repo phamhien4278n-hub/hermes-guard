@@ -1,0 +1,89 @@
+{
+  "version": "1.7.9",
+  "input_rules": [
+    {
+      "id": "real_time",
+      "level": "L1",
+      "risk": "medium",
+      "patterns": ["现在几点", "几点了", "今天", "昨日", "昨天", "明天", "刚刚", "最新", "实时", "当前时间"],
+      "instruction": "涉及实时或相对时间。必须使用外部时间或搜索结果确认；没有外部事实时，不得凭记忆给确定答案。"
+    },
+    {
+      "id": "paper_verification",
+      "level": "L1",
+      "risk": "high",
+      "patterns": ["论文", "arXiv", "NeurIPS", "ACL", "EACL", "ICLR", "ICML", "真实性", "核对", "核验", "citation"],
+      "instruction": "涉及文献真实性。必须逐条给出可访问来源；无法核验的条目标为待核验，不得把推测写成事实。"
+    },
+    {
+      "id": "context_usage",
+      "level": "L3",
+      "risk": "high",
+      "patterns": ["上下文还剩", "上下文使用率", "context usage", "token还剩", "token 还剩", "还能聊多久"],
+      "instruction": "你不能直接感知上下文使用率。只能报告外部系统提供的指标；没有指标就明确说不知道。"
+    },
+    {
+      "id": "turn_count",
+      "level": "L1",
+      "risk": "medium",
+      "patterns": ["第几轮", "多少轮", "轮数", "turn count", "第几次对话"],
+      "instruction": "对话轮数必须来自外部计数器。不得凭上下文感觉估算。"
+    },
+    {
+      "id": "file_access",
+      "level": "L2",
+      "risk": "high",
+      "patterns": ["读取文件", "打开文件", "这个文件", ".md", ".txt", ".py", ".json", "路径", "目录", "保存到"],
+      "instruction": "涉及文件系统。必须以工具回执为准；没有读取或写入回执时，不得声称文件已读、已写或已验证。"
+    },
+    {
+      "id": "latest_version",
+      "level": "L1",
+      "risk": "medium",
+      "patterns": ["最新版", "最新版本", "最新 API", "价格", "model pricing", "release note", "更新日志"],
+      "instruction": "涉及可能变化的信息。必须查最新来源；无法查证时，明确标为未核验。"
+    },
+    {
+      "id": "memory_claim",
+      "level": "L3",
+      "risk": "medium",
+      "patterns": ["你还记得", "上次我们", "长期记忆", "以后都记住", "下次提醒我"],
+      "instruction": "涉及跨会话记忆或未来保证。只能基于外部记忆系统或当前上下文回答；不得承诺无法保证的未来记忆。"
+    },
+    {
+      "id": "token_estimate",
+      "level": "L3",
+      "risk": "medium",
+      "patterns": ["估算 token", "token 消耗", "用了多少 token", "多少 tokens"],
+      "instruction": "token 消耗估算不可靠。只有外部计量器提供数据时才能给确定数值，否则只给粗略范围并声明不确定。"
+    }
+  ],
+  "response_rules": [
+    {
+      "id": "unsupported_completion_claim",
+      "risk": "high",
+      "patterns": ["已经验证", "我确认了", "测试通过", "文件已更新", "已经保存", "已经写入", "没有问题", "已完成"],
+      "instruction": "回复中出现完成或验证声明。若没有对应工具证据，必须改成未验证表述，或先执行验证。",
+      "evidence_requirements": [
+        {
+          "patterns": ["测试通过"],
+          "required_any": ["test_passed"]
+        },
+        {
+          "patterns": ["文件已更新", "已经保存", "已经写入"],
+          "required_any": ["file_write"]
+        },
+        {
+          "patterns": ["已经验证", "我确认了", "没有问题", "已完成"],
+          "required_any": ["file_read", "file_write", "command_run", "test_passed", "web_verified", "manual_review"]
+        }
+      ]
+    },
+    {
+      "id": "unsupported_source_claim",
+      "risk": "medium",
+      "patterns": ["论文表明", "研究证明", "官方文档说", "最新资料显示"],
+      "instruction": "回复中出现来源型断言。必须绑定来源链接、文件路径或明确标为未核验。"
+    }
+  ]
+}
