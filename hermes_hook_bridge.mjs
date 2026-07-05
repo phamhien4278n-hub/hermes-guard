@@ -3,7 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -11,6 +11,11 @@ const GUARD = path.join(__dirname, "guard.mjs");
 const DEFAULT_AGENT = "hermes";
 const DEFAULT_AUDIT_DIR = process.env.HERMES_GUARD_AUDIT_DIR || path.join(__dirname, "audit");
 const GUARD_TIMEOUT_MS = Number(process.env.HERMES_GUARD_TIMEOUT_MS || 10000);
+const POPUP_ENABLED = String(process.env.HERMES_GUARD_POPUP || "1") !== "0";
+const POPUP_COOLDOWN_MS = Number(process.env.HERMES_GUARD_POPUP_COOLDOWN_MS || 30000);
+const POPUP_SCRIPT = process.env.HERMES_GUARD_POPUP_SCRIPT || path.join(__dirname, "guard_popup.ps1");
+const SOUND_SCRIPT = process.env.HERMES_GUARD_SOUND_SCRIPT || path.join(__dirname, "guard_sound.ps1");
+const POPUP_DRY_RUN = String(process.env.HERMES_GUARD_POPUP_DRY_RUN || "0") === "1";
 
 function readStdinJson() {
   const raw = fs.readFileSync(0, "utf8");
@@ -32,6 +37,10 @@ function asciiJson(value) {
 
 function sessionId(payload) {
   return payload.session_id || payload.extra?.session_id || payload.extra?.parent_session_id || "hermes-unknown";
+}
+
+function safeSessionFileName(value) {
+  return String(value || "default").replace(/[^a-zA-Z0-9_.-]/g, "_") || "default";
 }
 
 function writeCurrentSession(sid) {
@@ -87,6 +96,101 @@ function commonArgs(payload) {
   return ["--agent", DEFAULT_AGENT, "--session-id", sessionId(payload)];
 }
 
+function responseText(payload) {
+  return String(
+    payload.extra?.response_text
+    || payload.extra?.assistant_response
+    || payload.response_text
+    || payload.assistant_response
+    || payload.output
+    || payload.text
+    || ""
+  );
+}
+
+function guardMatchIds(checkData) {
+  return (checkData?.matches || []).map((item) => item.id || item);
+}
+
+function popupStatePath() {
+  return path.join(DEFAULT_AUDIT_DIR, ".popup_state.json");
+}
+
+function popupFingerprint(payload, checkData, response) {
+  const excerpt = String(response || "").replace(/\s+/g, " ").trim().slice(0, 240);
+  return [
+    safeSessionFileName(sessionId(payload)),
+    checkData?.risk || "unknown",
+    guardMatchIds(checkData).join(","),
+    excerpt
+  ].join("|");
+}
+
+function shouldShowPopup(payload, checkData, response) {
+  try {
+    fs.mkdirSync(DEFAULT_AUDIT_DIR, { recursive: true });
+    const now = Date.now();
+    const key = popupFingerprint(payload, checkData, response);
+    let state = {};
+    if (fs.existsSync(popupStatePath())) {
+      state = JSON.parse(fs.readFileSync(popupStatePath(), "utf8"));
+    }
+    if (state.key === key && Number(state.updated_at_ms || 0) + POPUP_COOLDOWN_MS > now) {
+      return false;
+    }
+    fs.writeFileSync(popupStatePath(), JSON.stringify({ key, updated_at_ms: now }, null, 2), "utf8");
+    return true;
+  } catch {
+    return true;
+  }
+}
+
+function popupMessage(payload, checkData, response, source) {
+  const matches = guardMatchIds(checkData).join(", ") || "unknown";
+  const excerpt = String(response || "").replace(/\s+/g, " ").trim().slice(0, 360);
+  return [
+    "Hermes Guard detected unsupported claims.",
+    "",
+    "Hermes Guard 检测到未被外部证据支撑的声明。",
+    "",
+    `Risk / 风险: ${checkData?.risk || "unknown"}`,
+    `Rules / 规则: ${matches}`,
+    `Session / 会话: ${sessionId(payload)}`,
+    `Source / 来源: ${source}`,
+    "",
+    "Excerpt / 片段:",
+    excerpt || "(empty)",
+    "",
+    "Guard has logged this event. Click OK to continue.",
+    "Guard 已记录本次事件。点击 OK 继续。"
+  ].join("\n");
+}
+
+function launchPopupWarning(payload, checkData, response, source) {
+  if (!POPUP_ENABLED) return;
+  if (process.platform !== "win32") {
+    return;
+  }
+  if (!shouldShowPopup(payload, checkData, response)) {
+    writeBridgeStatus({ ok: true, stage: "sound_suppressed", reason: "cooldown", event_source: source, session_id: sessionId(payload) });
+    return;
+  }
+  try {
+    const child = spawn("powershell.exe", [
+      "-NoProfile", "-ExecutionPolicy", "Bypass",
+      "-File", SOUND_SCRIPT
+    ], {
+      detached: true,
+      stdio: "ignore",
+      windowsHide: true
+    });
+    child.unref();
+    writeBridgeStatus({ ok: true, stage: "sound_played", event_source: source, session_id: sessionId(payload), risk: checkData?.risk || "unknown", matches: guardMatchIds(checkData) });
+  } catch (error) {
+    writeBridgeStatus({ ok: false, stage: "sound_failed", event_source: source, session_id: sessionId(payload), error: error.message });
+  }
+}
+
 function summarizeHistory(payload) {
   const history = payload.extra?.conversation_history;
   if (!Array.isArray(history)) return { count: 0 };
@@ -120,25 +224,74 @@ function preLlmCall(payload) {
   return { context };
 }
 
+function postLlmCall(payload) {
+  const response = responseText(payload);
+  if (response.trim()) {
+    const check = runGuard(["check-response", ...commonArgs(payload), "--stdin"], response);
+    if (check.ok && check.data.risk !== "none") {
+      launchPopupWarning(payload, check.data, response, "post_llm_call");
+    }
+  }
+  return null;
+}
+
+function transformedOutputPayload(text, extra = {}) {
+  return {
+    context: text,
+    response_text: text,
+    assistant_response: text,
+    output: text,
+    text,
+    transformed_output: text,
+    modified_output: text,
+    replacement: text,
+    ...extra
+  };
+}
+
+function writeLastGuardResult(payload, checkData, response) {
+  try {
+    fs.mkdirSync(DEFAULT_AUDIT_DIR, { recursive: true });
+    const excerpt = String(response || "").replace(/\s+/g, " ").trim().slice(0, 200);
+    const record = {
+      session_id: sessionId(payload),
+      timestamp: new Date().toISOString(),
+      risk: checkData.risk || "unknown",
+      matches: guardMatchIds(checkData),
+      excerpt
+    };
+    fs.writeFileSync(
+      path.join(DEFAULT_AUDIT_DIR, ".last_guard_result.json"),
+      JSON.stringify(record, null, 2),
+      "utf8"
+    );
+  } catch {
+    // best-effort, don't block the main path
+  }
+}
+
 function transformLlmOutput(payload) {
-  const response = payload.extra?.response_text || "";
+  const response = responseText(payload);
   if (!response.trim()) return null;
 
   const check = runGuard(["check-response", ...commonArgs(payload), "--stdin"], response);
   if (!check.ok) {
-    return response + [
+    const text = response + [
       "",
       "",
       "[Hermes Guard]",
       `Guard check failed: ${check.error}`,
       "Treat this response as unverified until Guard is healthy again."
     ].join("\n");
+    return text;
   }
   if (check.data.risk === "none") {
     return null;
   }
+  launchPopupWarning(payload, check.data, response, "transform_llm_output");
+  writeLastGuardResult(payload, check.data, response);
 
-  const warning = [
+  return response + [
     "",
     "",
     "[Hermes Guard]",
@@ -147,15 +300,6 @@ function transformLlmOutput(payload) {
     `Matches: ${(check.data.matches || []).map((item) => item.id || item).join(", ")}`,
     "Please verify before relying on those claims."
   ].join("\n");
-  return response + warning;
-}
-
-function postLlmCall(payload) {
-  const response = payload.extra?.assistant_response || "";
-  if (response.trim()) {
-    runGuard(["check-response", ...commonArgs(payload), "--stdin"], response);
-  }
-  return null;
 }
 
 function evidenceKindForTool(payload) {
@@ -259,7 +403,11 @@ function main() {
 
     if (typeof result === "string") {
       writeBridgeStatus({ ok: true, stage: "completed", event, session_id: sessionId(payload), returned: "string" });
-      writeJson({ context: result });
+      if (event === "transform_llm_output") {
+        process.stdout.write(result);
+      } else {
+        writeJson({ context: result });
+      }
       return;
     }
     if (result && typeof result === "object") {

@@ -234,6 +234,25 @@ See [ROADMAP.md](docs/ROADMAP.md). Next priorities · 下阶段重点：
 
 ---
 
+## Recent Updates · 近期更新
+
+**2026-07-05 — Feedback Loop · 出口检查回灌**
+Guard's export check results now feed back to the agent's next turn. When Guard
+detects a high-risk unsupported claim, it writes a result file that the pipeline
+picks up on the next `pre_llm_call`, injecting a corrective reminder into the
+agent's context. The agent now sees what Guard caught last time — not just the user.
+
+Guard 的出口检查结果现在会回灌给 AI 的下一轮对话。高风险声明被拦截后，结果文件在下次
+`pre_llm_call` 时注入 AI 上下文——AI 自己能看到了，不再只靠用户提醒。
+
+**2026-07-04 — Sound Alerts · 声音提醒**
+Replaced popup dialogs (unreliable on Windows subprocess) with system beep alerts
+for cleaner, more reliable notification.
+
+弹窗方案替换为系统提示音——Windows 子进程弹窗不可靠，音频更稳定。
+
+---
+
 ## License · 许可证
 
 AGPL-3.0. See [LICENSE](LICENSE).
